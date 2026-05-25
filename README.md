@@ -4,6 +4,11 @@ Please **fork** the repo. You can work locally using a code editor, or open it i
 
 ---
 
+# Grading
+Every task is worth **5pts**. To get the maximum grade you must complete every task.
+
+---
+
 # 🟢 Task 1 (5 pts) - CI Quality Gate: Tests + Lint + Formatting
 
 ## 🎯 Goal
@@ -75,7 +80,7 @@ jobs:
 
 ---
 
-# 🟡 Task 2 (10 pts) - DevSecOps + PR Automation (CodeQL + Dependabot + PR Comment)
+# 🟡 Task 2 (5 pts) - DevSecOps + PR Automation (CodeQL + Dependabot + PR Comment)
 
 ## 🎯 Goal
 Enhance your repository with **security automation** and **PR feedback** by implementing:
@@ -147,7 +152,7 @@ updates:
 
 ---
 
-# 🔴 Task 3 (15 pts) - Build → Scan → Push Docker image (GitHub Secrets required)
+# 🔴 Task 3 (5 pts) - Build → Scan → Push Docker image (GitHub Secrets required)
 
 ## 🎯 Goal
 Create a GitHub Actions workflow that works like a **delivery pipeline**:

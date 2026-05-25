@@ -32,14 +32,47 @@ You should get a ✅/❌ status check on the PR.
 
 ---
 
-## 💡 Hints
-- Use `actions/checkout` to fetch the repository code.
-- Use `actions/setup-python` to set up Python on the runner.
-- Install dependencies from `requirements-dev.txt` (recommended).
-- Keep it simple: one workflow file with **two jobs** is fine (e.g. `lint` and `test`).
+## 💡 Hints (Step-by-Step Guide)
 
-Optional (nice):
-- Use caching for pip to speed up runs (e.g. via `actions/setup-python` cache option).
+To build your workflow, you need to combine a few standard GitHub Actions. Think of them as Lego blocks.
+
+**Step 1: The Skeleton**
+Start your file by defining the name, the trigger, and the job:
+```yaml
+name: CI Pipeline
+on: [pull_request]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      # Your steps will go here
+```
+
+**Step 2: Fetch Code and Setup Python**
+Under `steps:`, you always need to check out your code first, then install the language environment. Use these exact actions:
+```yaml
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip' # This speeds up your runs!
+```
+
+**Step 3: Install and Run**
+Now add standard run commands just like you would in your terminal:
+```yaml
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run Formatting Check
+        run: black --check .
+        
+      # Now add your own steps for 'ruff check .' and 'pytest'!
+```
 
 ---
 
@@ -61,56 +94,59 @@ Enhance your repository with **security automation** and **PR feedback** by impl
 
 ---
 
-## ✅ Requirements
+## ✅ Requirements (and Guides)
 
 ### (A) CodeQL (Code Scanning → Security tab)
-1. Create a workflow file:  
-   **`.github/workflows/codeql.yml`**
 
-2. The workflow must run on:
-- `push` to `main`
-- `pull_request` targeting `main`
-
-3. The workflow must upload CodeQL results so that they appear in:
-- **Security → Code scanning alerts**
-
-**Hint:** Use the CodeQL GitHub Action steps (advanced setup style) located in Security → Code scanning alerts → Set up code scanning:
-- `github/codeql-action/init`
-- `github/codeql-action/autobuild`
-- `github/codeql-action/analyze`
-
-**Hint (permissions):** CodeQL upload requires `security-events: write` in that workflow.
+**💡 How to do it:** You don't need to write this from scratch! 
+1. Go to your repository on GitHub.
+2. Click the **Security** tab -> **Code scanning** -> **Configure scanning tool**.
+3. Choose **CodeQL Analysis** (Advanced Setup). 
+4. GitHub will generate `codeql.yml` for you. Just commit it to your repository!
+*(Note: CodeQL requires `security-events: write` permissions, which the generated file handles automatically).*
 
 ---
 
 ### (B) Dependabot (automatic dependency update PRs)
-1. Create a config file:
-   **`.github/dependabot.yml`**
 
-2. Configure Dependabot for:
-- `pip` ecosystem (Python dependencies)
-- schedule interval: **weekly** (recommended)
+**💡 How to do it:** Dependabot doesn't use standard workflows. It uses a specific config file.
+1. Create `.github/dependabot.yml`.
+2. Use this template and fill in the missing `directory` and `schedule` details based on the official docs:
+```yaml
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/" # Where are your requirements files?
+    schedule:
+      interval: "weekly" 
+```
 
 ---
 
 ### (C) Automatic PR comment when CI succeeds
-1. Update your CI workflow (**`.github/workflows/ci.yml`**) to add a job that:
-- runs **only for Pull Requests**
-- runs **only after** `lint` and `test` jobs succeed (`needs: [lint, test]`)
-- posts a PR comment like:  
-  `✅ CI passed: tests + lint + formatting`
 
-2. The comment should **not spam** the PR:
-- either update the same comment each run (recommended)
-- or ensure only one comment is created
+**💡 How to do it:** 1. Open your `ci.yml` from Task 1.
+2. Add a **second job** right below your first one. 
+3. Use the `needs` keyword so it only runs if the tests pass, and use `actions/github-script` to interact with the PR:
 
-**Hint (how):**
-- Use `actions/github-script` to call the GitHub API and create/update a comment  
-  (PRs are treated as “issues” in the API)
-- Or use a marketplace action for PR comments
-
-**Hint (permissions):**
-- For commenting you will likely need: `issues: write` (or `pull-requests: write`) for that job.
+```yaml
+  pr-comment:
+    needs: build-and-test # Must match the name of your first job!
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write # Required to post a comment
+    steps:
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ CI passed: tests + lint + formatting are green!'
+            })
+```
 
 ---
 
@@ -132,79 +168,78 @@ Enhance your repository with **security automation** and **PR feedback** by impl
 Create a GitHub Actions workflow that works like a **delivery pipeline**:
 
 1) **Build** the Docker image from this repository  
-2) **Scan** the image with a **non-GitHub** container security scanner (e.g., Trivy)  
-3) **Push** the image to **Docker Hub**  
-4) Authenticate using **GitHub Secrets** (no credentials in code)
-
-This task focuses on secure automation and artifact delivery (image in a registry), not server deployment.
+2) **Scan** the image with a **non-GitHub** container security scanner (Trivy)  
+3) **Push** the image to **Docker Hub** 4) Authenticate using **GitHub Secrets** (no credentials in code)
 
 ---
 
-## ✅ Requirements
+## ✅ Requirements (and Guides)
 
 ### (A) Docker Hub auth via GitHub Secrets
-1. In your forked repository, add GitHub Actions secrets:
-- `DOCKERHUB_USERNAME`
-- `DOCKERHUB_TOKEN`
-
-> The token will be provided during class (whiteboard).  
-> Put it in GitHub → **Settings → Secrets and variables → Actions**.
-
-2. Your workflow must log in to Docker Hub **using these secrets** (no plaintext secrets in yml).
+1. Go to your repository **Settings → Secrets and variables → Actions**.
+2. Add `DOCKERHUB_USERNAME`.
+3. Add `DOCKERHUB_TOKEN` (provided during class).
 
 ---
 
-### (B) Workflow file and triggers
-1. Create a workflow file:
-- **`.github/workflows/docker.yml`**
+### (B) Setup the Workflow Skeleton
+1. Create `.github/workflows/docker.yml`.
+2. Trigger it **only** on `push` to `main` (never `pull_request` for deployments!).
 
-2. The workflow must run on:
-- `push` to `main`
+### (C & D) Generate Tags, Build, and Authenticate
 
-3. Important security rule:
-- **Do not push images to Docker Hub on `pull_request` events**  
-  (PR workflows should never require registry secrets).
+**💡 Step-by-Step Guide for the Job:**
 
----
+**1. Create a variable for your commit SHA** so you can tag your image uniquely:
+```yaml
+      - name: Get Short SHA
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+```
 
-### (C) Image naming convention (must include your identity)
-To avoid collisions (everyone pushing to the same Docker Hub account), your tag must include your **FirstName-LastName**.
+**2. Log in to DockerHub** using the secrets you created:
+```yaml
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+```
 
-✅ Required tag pattern (example):
-- `DOCKERHUB_USERNAME/<shared-repo>:firstname-lastname-<shortsha>`
+**3. Build the Image (but don't push yet!)** We need the image built locally so Trivy can scan it. Notice `load: true`:
+```yaml
+      - name: Build Docker image (local)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true # Keeps image in the runner for scanning
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/shared-repo:yourname-${{ env.SHORT_SHA }}
+```
 
-Example:
-- `shareduser/tsd-cicd:pawel-kelar-a1b2c3d`
+### (E) Container scanning & Final Push
 
----
+**4. Scan the image with Trivy.** Use the official Aqua Security action. Tell it to look at the exact tag you just built:
+```yaml
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ secrets.DOCKERHUB_USERNAME }}/shared-repo:yourname-${{ env.SHORT_SHA }}'
+          format: 'table'
+          exit-code: '1' # Fails the pipeline if vulnerabilities are found!
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+```
 
-### (D) Build & Push using official Docker actions
-Your workflow must use GitHub Actions that are designed for Docker workflows (recommended set):
-- Docker login action
-- Buildx setup
-- Build and push action
-
----
-
-### (E) Container scanning (non-GitHub scanner)
-Add a container security scan step **before pushing**, using a tool like **Trivy**.
-
-Requirements for scanning:
-- Scan the **built image**
-- Fail the workflow when vulnerabilities of selected severities are found (choose at least `HIGH,CRITICAL`)
-- Scanning must happen **before** push (as a quality gate)
-
-*(This is your “DevSecOps in CD” part.)*
-
----
-
-## 💡 Hints
-- Use `docker/setup-buildx-action` for modern builds (Buildx)
-- Use `docker/login-action` for registry authentication (Docker Hub)
-- Use `docker/build-push-action` for building + pushing the image
-- Use `aquasecurity/trivy-action` to scan your image
-- You can generate `shortsha` from `${{ github.sha }}` in a step and reuse it later
-- Consider conditional push logic (push only if scan passed)
+**5. Push the Image.**
+If Trivy passes, the pipeline will continue. Now you can safely push!
+```yaml
+      - name: Push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true # Now we actually push it!
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/shared-repo:yourname-${{ env.SHORT_SHA }}
+```
 
 ---
 
@@ -216,5 +251,3 @@ Requirements for scanning:
   2) scans it
   3) pushes it to Docker Hub
 - Verify on Docker Hub that your image tag exists and includes your name.
-
----

@@ -176,23 +176,25 @@ You will need to search the GitHub Marketplace for the official Docker actions (
 ```yaml
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: # Use the same checkout action as in Task 1
         
-      - name: Get Short SHA (Provided)
+      - name: Get Short SHA
         run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: Log in to Docker Hub
         uses: # TODO: Find the official docker login-action
         with:
-          username: # TODO: Pass your secret here
-          password: # TODO: Pass your secret here
+          # !!! IMPORTANT !!! - do not paste the login and token here directly!
+          # secrest should never be stored in repo code. Check the "Using secrets in GitHub Actions" docs.
+          username: # TODO: Pass your secret here.
+          password: # TODO: Pass your secret here.
 
       - name: Build Docker image (local)
         uses: # TODO: Find the official docker build-push-action
         with:
           context: .
           load: true # CRITICAL: This keeps the image in the runner so Trivy can scan it
-          tags: # TODO: Format tag as -> ${{ secrets.DOCKERHUB_USERNAME }}/shared-repo:yourname-${{ env.SHORT_SHA }}
+          tags: # TODO: Format tag as -> ${{ secrets.DOCKERHUB_USERNAME }}/tsd-tutorial:yourname-${{ env.SHORT_SHA }}
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master

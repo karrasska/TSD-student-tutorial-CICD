@@ -27,6 +27,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: Docker/Dockerfile
           load: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tsd-tutorial:yourname-${{ env.SHORT_SHA }}
 
@@ -43,5 +44,6 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: Docker/Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tsd-tutorial:yourname-${{ env.SHORT_SHA }}
